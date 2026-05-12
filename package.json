@@ -1,0 +1,19 @@
+{
+  "name": "saas-wallet-integration",
+  "private": true,
+  "version": "0.1.0",
+  "description": "SaaS wallet integration monorepo — React/Vite frontend + Express backend",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev -w apps/api\" \"npm run dev -w apps/web\"",
+    "build": "npm run build -w packages/shared && npm run build -w apps/api && npm run build -w apps/web",
+    "lint": "npm run lint --workspaces --if-present"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.4.5"
+  }
+}
