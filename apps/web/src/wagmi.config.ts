@@ -7,7 +7,7 @@ export const queryClient = new QueryClient();
 
 const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID ?? "5d96428579c2842614d599bb4f8dce0e";
 
-export const networks = [mainnet, base, arbitrum] as const;
+export const networks: [typeof mainnet, typeof base, typeof arbitrum] = [mainnet, base, arbitrum];
 
 export const wagmiAdapter = new WagmiAdapter({
   projectId,

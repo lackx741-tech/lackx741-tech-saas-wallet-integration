@@ -46,7 +46,7 @@ cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env
 ```
 
-The default values work for local development. The WalletConnect Project ID is already pre-filled in the frontend env example.
+The defaults are set for local development and include RPC URLs used by backend planning.
 
 ### 3. Run frontend + backend concurrently
 
@@ -85,6 +85,16 @@ npm run build
 
 ---
 
+## Current Local Flow
+
+- `POST /api/plan/eip7702` validates payloads and fetches nonce/fees from RPC when available.
+- `POST /api/submit/eip7702` requires a known `executionId` from the in-memory execution store.
+- `POST /api/plan/permit2-batch` returns deterministic EIP-712 typed data and stores execution state.
+- `POST /api/submit/permit2-batch` requires known `executionId` and verifies the signature against stored typed data.
+- Relaying is still mocked; submission endpoints return realistic status payloads with timestamps/flow.
+
+---
+
 ## Contract Addresses (shared/src/addresses.ts)
 
 | Name | Address |
@@ -106,10 +116,9 @@ npm run build
 
 ## Scaffold Limitations
 
-- **No real onchain execution.** Planning and submission endpoints return mock payloads and execution IDs.
-- **No signature validation.** The backend does not verify EIP-712 or authorization list signatures yet.
-- **No nonce/gas fetching.** Nonces, gas limits, and gas prices are hardcoded placeholders.
-- **No persistence.** Execution IDs are not stored between requests; add a DB or in-memory store for tracking.
+- **No real relayer broadcast yet.** Submission endpoints still mock relay execution and tx propagation.
+- **In-memory execution store only.** Execution tracking resets when API restarts.
+- **EIP-7702 wallet support is partial.** Frontend sends best-effort tx fields and reports unsupported `authorizationList`.
 - **No relayer wallet.** The backend has no funded wallet to broadcast transactions.
 
 ---

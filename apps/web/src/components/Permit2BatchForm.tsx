@@ -13,6 +13,7 @@ export function Permit2BatchForm() {
   const [amount, setAmount] = useState("1000000000000000000");
   const [planResult, setPlanResult] = useState<Permit2BatchPlanResponse | null>(null);
   const [submitResult, setSubmitResult] = useState<unknown>(null);
+  const [history, setHistory] = useState<Array<{ step: string; at: string; payload: unknown }>>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -27,6 +28,7 @@ export function Permit2BatchForm() {
         permits: [{ token, amount }],
       }) as Permit2BatchPlanResponse;
       setPlanResult(plan);
+      setHistory((prev) => [{ step: "planned", at: new Date().toISOString(), payload: plan }, ...prev].slice(0, 5));
     } catch (e) {
       setError(String(e));
     } finally {
@@ -56,6 +58,7 @@ export function Permit2BatchForm() {
         signature,
       });
       setSubmitResult(result);
+      setHistory((prev) => [{ step: "submitted", at: new Date().toISOString(), payload: result }, ...prev].slice(0, 5));
     } catch (e) {
       setError(String(e));
     } finally {
@@ -94,6 +97,7 @@ export function Permit2BatchForm() {
       </div>
       <StatusPanel title="Plan" result={planResult} error={error} />
       <StatusPanel title="Submit" result={submitResult} />
+      <StatusPanel title="History (latest first)" result={history} />
     </div>
   );
 }

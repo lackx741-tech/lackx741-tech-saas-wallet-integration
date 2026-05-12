@@ -20,7 +20,7 @@ export function StatusPanel({ title, result, error }: Props) {
     >
       <strong>{title}:</strong>
       {error && <p style={{ color: "#c0392b" }}>{error}</p>}
-      {result && <pre style={{ margin: 0 }}>{JSON.stringify(result, null, 2)}</pre>}
+      {Boolean(result) && <pre style={{ margin: 0 }}>{JSON.stringify(result, null, 2)}</pre>}
     </div>
   );
 }
