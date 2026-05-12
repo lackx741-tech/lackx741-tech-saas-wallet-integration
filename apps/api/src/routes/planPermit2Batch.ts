@@ -5,19 +5,28 @@ import {
   Permit2BatchPlanResponse,
   CONTRACT_ADDRESSES,
 } from "@saas-wallet/shared";
+import { keccak256, toHex } from "viem";
+import { storePlannedExecution } from "../store/executionStore";
+import { formatValidationError, permit2BatchPlanRequestSchema } from "../validation/schemas";
 
 const router = Router();
 
-router.post("/plan/permit2-batch", (req: Request, res: Response) => {
-  const body = req.body as Partial<Permit2BatchPlanRequest>;
+function derivePermitNonce(executionId: string, index: number): number {
+  const hash = keccak256(toHex(`${executionId}:${index}`));
+  return Number.parseInt(hash.slice(2, 15), 16);
+}
 
-  if (!body.sender || !body.chainId || !body.permits || !body.permits.length) {
-    res.status(400).json({ error: "sender, chainId, and permits[] are required" });
+router.post("/plan/permit2-batch", (req: Request, res: Response) => {
+  const parsed = permit2BatchPlanRequestSchema.safeParse(req.body as Partial<Permit2BatchPlanRequest>);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid request body", details: formatValidationError(parsed.error) });
     return;
   }
+  const body = parsed.data;
 
   const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
   const spender = body.spender ?? (CONTRACT_ADDRESSES.Permit2Executor as `0x${string}`);
+  const executionId = uuidv4();
 
   // Build EIP-712 typed data for PermitBatch
   // Matches the Permit2 canonical ABI: https://github.com/Uniswap/permit2
@@ -46,7 +55,7 @@ router.post("/plan/permit2-batch", (req: Request, res: Response) => {
         token: p.token,
         amount: p.amount,
         expiration: p.expiration ?? deadline,
-        nonce: i, // TODO: fetch real nonces from Permit2 contract per token
+        nonce: derivePermitNonce(executionId, i),
       })),
       spender,
       sigDeadline: deadline,
@@ -54,12 +63,17 @@ router.post("/plan/permit2-batch", (req: Request, res: Response) => {
   };
 
   const response: Permit2BatchPlanResponse = {
-    executionId: uuidv4(),
+    executionId,
     typedData,
     deadline,
   };
 
-  // TODO: Persist executionId + typedData hash for submission verification
+  storePlannedExecution(executionId, "permit2-batch", {
+    sender: body.sender,
+    chainId: body.chainId,
+    typedData,
+    deadline,
+  });
 
   res.json(response);
 });

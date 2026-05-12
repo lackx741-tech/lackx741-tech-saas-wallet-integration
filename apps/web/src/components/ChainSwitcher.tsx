@@ -1,5 +1,5 @@
 import { useSwitchChain, useAccount } from "wagmi";
-import { SUPPORTED_CHAINS } from "@saas-wallet/shared";
+import { networks } from "../wagmi.config";
 
 export function ChainSwitcher() {
   const { chainId } = useAccount();
@@ -11,7 +11,7 @@ export function ChainSwitcher() {
         <strong>Current chain:</strong> {chainId ?? "unknown"}
       </p>
       <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-        {SUPPORTED_CHAINS.map((chain) => (
+        {networks.map((chain) => (
           <button
             key={chain.id}
             disabled={isPending || chainId === chain.id}

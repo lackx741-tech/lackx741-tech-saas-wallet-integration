@@ -51,6 +51,11 @@ export interface AuthorizationItem {
 export interface Eip7702PlanResponse {
   executionId: string;
   txRequest: Eip7702TxRequest;
+  planning?: {
+    balance: HexString;
+    nonceSource: "rpc" | "fallback";
+    feeSource: "rpc" | "fallback";
+  };
 }
 
 // ─── POST /api/submit/eip7702 ─────────────────────────────────────────────────
@@ -61,12 +66,19 @@ export interface Eip7702SubmitRequest {
   txHash?: HexString;
   /** Or a raw signed tx blob if the relayer signs it */
   signedTx?: HexString;
+  /** Snapshot of the planned tx sent by frontend for backend inspection/debugging */
+  txRequestSnapshot?: Eip7702TxRequest;
+  /** Fields not supported by current wallet helper (e.g. authorizationList) */
+  unsupportedFields?: string[];
 }
 
 export interface ExecutionStatus {
   executionId: string;
   status: "pending" | "submitted" | "confirmed" | "failed";
   txHash?: HexString;
+  flow?: "eip7702" | "permit2-batch";
+  createdAt?: string;
+  updatedAt?: string;
   message?: string;
 }
 

@@ -12,6 +12,7 @@ export function Eip7702Form() {
   const [calldata, setCalldata] = useState("0x");
   const [planResult, setPlanResult] = useState<Eip7702PlanResponse | null>(null);
   const [submitResult, setSubmitResult] = useState<unknown>(null);
+  const [history, setHistory] = useState<Array<{ step: string; at: string; payload: unknown }>>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -22,6 +23,7 @@ export function Eip7702Form() {
     try {
       const plan = await planEip7702({ sender: address, chainId, calldata }) as Eip7702PlanResponse;
       setPlanResult(plan);
+      setHistory((prev) => [{ step: "planned", at: new Date().toISOString(), payload: plan }, ...prev].slice(0, 5));
     } catch (e) {
       setError(String(e));
     } finally {
@@ -40,10 +42,20 @@ export function Eip7702Form() {
         to: tx.to,
         data: tx.data,
         value: BigInt(tx.value),
+        gas: BigInt(tx.gas),
+        nonce: Number(BigInt(tx.nonce)),
+        maxFeePerGas: BigInt(tx.maxFeePerGas),
+        maxPriorityFeePerGas: BigInt(tx.maxPriorityFeePerGas),
         chainId: parseInt(tx.chainId, 16),
       });
-      const result = await submitEip7702({ executionId: planResult.executionId, txHash });
+      const result = await submitEip7702({
+        executionId: planResult.executionId,
+        txHash,
+        txRequestSnapshot: tx,
+        unsupportedFields: ["authorizationList"],
+      });
       setSubmitResult(result);
+      setHistory((prev) => [{ step: "submitted", at: new Date().toISOString(), payload: result }, ...prev].slice(0, 5));
     } catch (e) {
       setError(String(e));
     } finally {
@@ -72,8 +84,12 @@ export function Eip7702Form() {
           Sign & Submit
         </button>
       </div>
+      <p style={{ color: "#8a6d3b", fontSize: "0.8rem", marginTop: "0.5rem" }}>
+        Note: current wallet helper does not expose EIP-7702 authorizationList fields. The backend still stores the full planned transaction for inspection.
+      </p>
       <StatusPanel title="Plan" result={planResult} error={error} />
       <StatusPanel title="Submit" result={submitResult} />
+      <StatusPanel title="History (latest first)" result={history} />
     </div>
   );
 }

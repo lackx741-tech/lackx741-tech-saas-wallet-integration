@@ -5,53 +5,114 @@ import {
   Eip7702PlanResponse,
   CONTRACT_ADDRESSES,
 } from "@saas-wallet/shared";
+import { PublicClient, toHex } from "viem";
+import { getPublicClientForChain } from "../config/rpc";
+import { storePlannedExecution } from "../store/executionStore";
+import { eip7702PlanRequestSchema, formatValidationError } from "../validation/schemas";
 
 const router = Router();
 
-router.post("/plan/eip7702", (req: Request, res: Response) => {
-  const body = req.body as Partial<Eip7702PlanRequest>;
+router.post("/plan/eip7702", async (req: Request, res: Response) => {
+  const parsed = eip7702PlanRequestSchema.safeParse(req.body as Partial<Eip7702PlanRequest>);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid request body", details: formatValidationError(parsed.error) });
+    return;
+  }
+  const body = parsed.data;
+  const sender = body.sender as `0x${string}`;
+  const calldata = (body.calldata ?? "0x") as `0x${string}`;
 
-  // --- Basic validation ---
-  if (!body.sender || !body.chainId) {
-    res.status(400).json({ error: "sender and chainId are required" });
+  const delegateTo = (body.delegateTo ?? CONTRACT_ADDRESSES.EIP7702Module) as `0x${string}`;
+  let client: PublicClient;
+  try {
+    client = getPublicClientForChain(body.chainId);
+  } catch (error) {
+    res.status(400).json({ error: (error as Error).message });
     return;
   }
 
-  const delegateTo = body.delegateTo ?? (CONTRACT_ADDRESSES.EIP7702Module as `0x${string}`);
+  let nonce = 0n;
+  let gas = 100000n;
+  let balance = 0n;
+  let maxPriorityFeePerGas = 1_000_000_000n;
+  let maxFeePerGas = 5_000_000_000n;
+  let nonceSource: "rpc" | "fallback" = "fallback";
+  let feeSource: "rpc" | "fallback" = "fallback";
 
-  // TODO: Replace with real nonce fetch from RPC node
-  const nonce = "0x0";
-  // TODO: Replace with real gas estimation
-  const gas = "0x186A0"; // 100_000
-  // TODO: Fetch real base fee from the chain
-  const maxFeePerGas = "0x12A05F200"; // 5 gwei
-  const maxPriorityFeePerGas = "0x3B9ACA00"; // 1 gwei
+  try {
+    nonce = BigInt(await client.getTransactionCount({ address: sender, blockTag: "pending" }));
+    nonceSource = "rpc";
+  } catch {
+    nonce = 0n;
+  }
+
+  try {
+    balance = await client.getBalance({ address: sender });
+  } catch {
+    balance = 0n;
+  }
+
+  try {
+    gas = await client.estimateGas({
+      account: sender,
+      to: sender,
+      value: 0n,
+      data: calldata,
+    });
+  } catch {
+    gas = 100000n;
+  }
+
+  try {
+    const fee = await client.estimateFeesPerGas();
+    maxPriorityFeePerGas = fee.maxPriorityFeePerGas ?? maxPriorityFeePerGas;
+    if (fee.maxFeePerGas) {
+      maxFeePerGas = fee.maxFeePerGas;
+    } else if (fee.gasPrice) {
+      maxFeePerGas = fee.gasPrice + maxPriorityFeePerGas;
+    }
+    feeSource = "rpc";
+  } catch {
+    maxPriorityFeePerGas = 1_000_000_000n;
+    maxFeePerGas = 5_000_000_000n;
+  }
 
   const chainIdHex = `0x${body.chainId.toString(16)}` as `0x${string}`;
+  const executionId = uuidv4();
 
   const response: Eip7702PlanResponse = {
-    executionId: uuidv4(),
+    executionId,
     txRequest: {
-      from: body.sender,
-      to: body.sender, // EIP-7702: the sender delegates itself
+      from: sender,
+      to: sender, // EIP-7702: the sender delegates itself
       value: "0x0",
-      data: body.calldata ?? "0x",
+      data: calldata,
       chainId: chainIdHex,
-      nonce,
-      gas,
-      maxFeePerGas,
-      maxPriorityFeePerGas,
+      nonce: toHex(nonce),
+      gas: toHex(gas),
+      maxFeePerGas: toHex(maxFeePerGas),
+      maxPriorityFeePerGas: toHex(maxPriorityFeePerGas),
       authorizationList: [
         {
           chainId: chainIdHex,
           address: delegateTo,
-          nonce: "0x1",
+          nonce: toHex(nonce),
         },
       ],
     },
+    planning: {
+      balance: toHex(balance),
+      nonceSource,
+      feeSource,
+    },
   };
 
-  // TODO: Persist executionId to DB or in-memory store for submission tracking
+  storePlannedExecution(executionId, "eip7702", {
+    sender,
+    chainId: body.chainId,
+    balance: toHex(balance),
+    txRequest: response.txRequest,
+  });
 
   res.json(response);
 });
