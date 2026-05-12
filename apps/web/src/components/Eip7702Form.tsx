@@ -85,7 +85,7 @@ export function Eip7702Form() {
         </button>
       </div>
       <p style={{ color: "#8a6d3b", fontSize: "0.8rem", marginTop: "0.5rem" }}>
-        Note: current wallet helper does not expose EIP-7702 authorizationList fields. The backend still stores the full planned tx for inspection.
+        Note: current wallet helper does not expose EIP-7702 authorizationList fields. The backend still stores the full planned transaction for inspection.
       </p>
       <StatusPanel title="Plan" result={planResult} error={error} />
       <StatusPanel title="Submit" result={submitResult} />

@@ -3,13 +3,14 @@ import {
   Eip7702SubmitRequest,
   ExecutionStatus,
 } from "@saas-wallet/shared";
-import { keccak256, toHex } from "viem";
+import { keccak256 } from "viem";
 import { eip7702SubmitRequestSchema, formatValidationError } from "../validation/schemas";
 import { getExecution, markExecutionSubmitted } from "../store/executionStore";
+import { submitRateLimit } from "../middleware/rateLimit";
 
 const router = Router();
 
-router.post("/submit/eip7702", (req: Request, res: Response) => {
+router.post("/submit/eip7702", submitRateLimit, (req: Request, res: Response) => {
   const parsed = eip7702SubmitRequestSchema.safeParse(req.body as Partial<Eip7702SubmitRequest>);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid request body", details: formatValidationError(parsed.error) });
@@ -23,9 +24,14 @@ router.post("/submit/eip7702", (req: Request, res: Response) => {
     return;
   }
 
+  if (!body.txHash && !body.signedTx) {
+    res.status(400).json({ error: "txHash or signedTx is required" });
+    return;
+  }
+
   const txHash =
     (body.txHash as `0x${string}` | undefined) ??
-    keccak256((body.signedTx as `0x${string}` | undefined) ?? toHex(body.executionId));
+    keccak256(body.signedTx as `0x${string}`);
   const status = markExecutionSubmitted(body.executionId, {
     txHash,
     submission: {

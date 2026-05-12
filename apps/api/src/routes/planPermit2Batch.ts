@@ -13,7 +13,7 @@ const router = Router();
 
 function derivePermitNonce(executionId: string, index: number): number {
   const hash = keccak256(toHex(`${executionId}:${index}`));
-  return parseInt(hash.slice(2, 14), 16);
+  return Number.parseInt(hash.slice(2, 15), 16);
 }
 
 router.post("/plan/permit2-batch", (req: Request, res: Response) => {

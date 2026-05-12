@@ -3,13 +3,14 @@ import {
   Permit2BatchSubmitRequest,
   ExecutionStatus,
 } from "@saas-wallet/shared";
-import { keccak256, verifyTypedData } from "viem";
+import { verifyTypedData } from "viem";
 import { getExecution, markExecutionSubmitted } from "../store/executionStore";
 import { formatValidationError, permit2BatchSubmitRequestSchema } from "../validation/schemas";
+import { submitRateLimit } from "../middleware/rateLimit";
 
 const router = Router();
 
-router.post("/submit/permit2-batch", async (req: Request, res: Response) => {
+router.post("/submit/permit2-batch", submitRateLimit, async (req: Request, res: Response) => {
   const parsed = permit2BatchSubmitRequestSchema.safeParse(req.body as Partial<Permit2BatchSubmitRequest>);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid request body", details: formatValidationError(parsed.error) });
@@ -48,9 +49,8 @@ router.post("/submit/permit2-batch", async (req: Request, res: Response) => {
   }
 
   const status = markExecutionSubmitted(body.executionId, {
-    txHash: keccak256(body.signature as `0x${string}`),
     submission: { signature: body.signature },
-    message: "Permit2 batch accepted and marked submitted (mock relay).",
+    message: "Permit2 batch accepted and marked submitted. Relay broadcast remains mocked.",
   });
 
   res.json(

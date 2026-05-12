@@ -96,7 +96,7 @@ router.post("/plan/eip7702", async (req: Request, res: Response) => {
         {
           chainId: chainIdHex,
           address: delegateTo,
-          nonce: toHex(nonce + 1n),
+          nonce: toHex(nonce),
         },
       ],
     },
