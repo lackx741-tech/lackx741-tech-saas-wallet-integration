@@ -1,4 +1,4 @@
-# # SaaS Wallet Integration
+# SaaS Wallet Integration
 
 A production-oriented scaffold for a SaaS wallet module built with **React + Vite** (frontend) and **Express** (backend).
 
