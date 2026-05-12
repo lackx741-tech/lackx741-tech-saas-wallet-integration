@@ -1,0 +1,30 @@
+{
+  "name": "@saas-wallet/web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "React + Vite frontend for SaaS wallet integration",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "lint": "eslint src --ext ts,tsx"
+  },
+  "dependencies": {
+    "@reown/appkit": "^1.6.8",
+    "@reown/appkit-adapter-wagmi": "^1.6.8",
+    "@saas-wallet/shared": "*",
+    "@tanstack/react-query": "^5.45.1",
+    "@wagmi/core": "^2.13.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "viem": "^2.17.0",
+    "wagmi": "^2.12.5"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "typescript": "^5.4.5",
+    "vite": "^5.3.1"
+  }
+}
